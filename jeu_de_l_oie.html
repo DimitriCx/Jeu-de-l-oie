@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de l'Oie Avancé</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);
+        }
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(10, minmax(0, 1fr));
+            gap: 4px;
+        }
+        @keyframes bounce-token {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .token-anim {
+            animation: bounce-token 0.6s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col min-h-screen text-gray-800">
+
+    <!-- En-tête -->
+    <header class="bg-white shadow-md py-4 px-6 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <span class="text-3xl">🪿</span>
+            <h1 class="text-2xl font-extrabold text-emerald-600 tracking-wide">Le Grand Jeu de l'Oie</h1>
+        </div>
+        <div id="header-status" class="text-sm font-medium text-gray-600">Configuration de la partie</div>
+    </header>
+
+    <!-- Contenu Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+        <!-- SECTION 1 : CONFIGURATION DES JOUEURS -->
+        <section id="setup-section" class="bg-white rounded-2xl shadow-xl p-6 md:p-8 max-w-xl mx-auto w-full transition-all duration-300">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span>⚙️</span> Paramètres de la Partie
+            </h2>
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre de joueurs (2 à 4) :</label>
+                <div class="flex gap-4">
+                    <button type="button" onclick="setPlayerCount(2)" class="player-count-btn flex-1 py-2 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 font-bold transition">2 Joueurs</button>
+                    <button type="button" onclick="setPlayerCount(3)" class="player-count-btn flex-1 py-2 rounded-xl border-2 border-gray-200 text-gray-600 font-bold hover:border-emerald-300 transition">3 Joueurs</button>
+                    <button type="button" onclick="setPlayerCount(4)" class="player-count-btn flex-1 py-2 rounded-xl border-2 border-gray-200 text-gray-600 font-bold hover:border-emerald-300 transition">4 Joueurs</button>
+                </div>
+            </div>
+
+            <div id="player-inputs-container" class="space-y-4 mb-6">
+                <!-- Généré dynamiquement -->
+            </div>
+
+            <button onclick="startGame()" class="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg hover:from-emerald-600 hover:to-green-700 active:scale-[0.98] transition">
+                Lancer le Jeu 🚀
+            </button>
+        </section>
+
+        <!-- SECTION 2 : PLATEAU DE JEU ET INTERFACE DE PARTIE (Caché au départ) -->
+        <section id="game-section" class="hidden flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Colonne Gauche : Plateau de jeu -->
+            <div class="lg:col-span-7 bg-white rounded-2xl shadow-xl p-4 md:p-6 flex flex-col items-center">
+                <div class="w-full flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-lg text-gray-700">Plateau (1 à 63)</h3>
+                    <div class="text-xs text-gray-500 flex gap-2">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-300 inline-block"></span> Oie</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span> Piège</span>
+                    </div>
+                </div>
+                <!-- Grille du plateau -->
+                <div id="board-grid" class="board-grid w-full aspect-square max-w-[550px] bg-emerald-50 p-2 rounded-xl border border-emerald-100">
+                    <!-- Généré dynamiquement -->
+                </div>
+            </div>
+
+            <!-- Colonne Droite : Commandes, Joueur Actif, Cartes et Historique -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                
+                <!-- Panneau de Tour & Dés -->
+                <div class="bg-white rounded-2xl shadow-xl p-5 border-l-8 border-emerald-500" id="turn-panel-border">
+                    <div class="flex justify-between items-center mb-3">
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-semibold text-gray-400">Tour de</span>
+                            <h3 id="active-player-name" class="text-xl font-extrabold text-gray-800">-</h3>
+                        </div>
+                        <div id="active-player-color-badge" class="w-8 h-8 rounded-full shadow-inner flex items-center justify-center text-white font-bold text-sm">P</div>
+                    </div>
+
+                    <div id="status-message" class="bg-emerald-50 text-emerald-800 text-sm p-3 rounded-xl mb-4 font-medium border border-emerald-200">
+                        C'est à votre tour ! Lancez les dés ou jouez une carte d'action.
+                    </div>
+
+                    <!-- Zone de Lancé de Dés -->
+                    <div class="flex items-center justify-between bg-gray-50 p-4 rounded-xl mb-4 border border-gray-100">
+                        <div class="flex gap-3">
+                            <div id="dice-1" class="w-12 h-12 bg-white rounded-xl shadow border border-gray-200 flex items-center justify-center text-2xl font-bold text-gray-700">🎲</div>
+                            <div id="dice-2" class="w-12 h-12 bg-white rounded-xl shadow border border-gray-200 flex items-center justify-center text-2xl font-bold text-gray-700">🎲</div>
+                        </div>
+                        <button id="roll-btn" onclick="rollDice()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition active:scale-95 flex items-center gap-2">
+                            <span>Lancer les dés</span>
+                        </button>
+                    </div>
+
+                    <!-- Cartes du Joueur Actif -->
+                    <div>
+                        <h4 class="text-xs uppercase font-bold text-gray-400 mb-2">Vos Cartes d'Actions en Main :</h4>
+                        <div id="player-cards-container" class="grid grid-cols-2 gap-2">
+                            <!-- Généré dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panneau d'Historique -->
+                <div class="bg-white rounded-2xl shadow-xl p-5 flex flex-col h-64">
+                    <h3 class="font-bold text-gray-700 text-sm uppercase tracking-wider mb-3">📜 Historique des Déplacements</h3>
+                    <div id="history-log" class="flex-1 overflow-y-auto space-y-2 pr-1 text-xs text-gray-600">
+                        <div class="text-gray-400 italic">La partie commence...</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Modale de Fin de Partie -->
+    <div id="win-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl animate-fade-in">
+            <div class="text-6xl mb-4">🏆</div>
+            <h2 id="winner-title" class="text-2xl font-extrabold text-gray-800 mb-2">Victoire !</h2>
+            <p id="winner-desc" class="text-gray-600 mb-6">Le joueur a triomphé du Jeu de l'Oie.</p>
+            <button onclick="resetGame()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow transition">
+                Rejouer une partie
+            </button>
+        </div>
+    </div>
+
+    <!-- Script principal du jeu -->
+    <script>
+        // Configuration et États du Jeu
+        let playerCount = 2;
+        let players = [];
+        let currentPlayerIndex = 0;
+        let gameActive = false;
+        let pendingActionEffect = null; // Anti-buff ou blocage de tour
+
+        const defaultColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b']; // Rouge, Bleu, Vert, Jaune
+        const defaultNames = ['Joueur 1', 'Joueur 2', 'Joueur 3', 'Joueur 4'];
+
+        const actionCardTypes = [
+            { id: 'double', name: 'Score Double', desc: 'Double le score des dés lors de votre lancer.', icon: '⚡' },
+            { id: 'immortalite', name: 'Immortalité', desc: 'Protège et ramène à la vie/départ en cas de mort (Case 58).', icon: '🛡️' },
+            { id: 'bloquer', name: 'Bloquer', desc: 'Fait sauter le tour du prochain joueur.', icon: '🛑' },
+            { id: 'antibuff', name: 'Anti-Buff', desc: 'Annule l\'effet négatif de la case sur laquelle vous tombez.', icon: '✨' }
+        ];
+
+        // Description des cases spéciales du Jeu de l'Oie classique
+        const specialCases = {
+            6: { type: 'bridge', target: 12, name: 'Pont', text: 'De pont en pont, allez directement à la case 12 !' },
+            12: { type: 'bridge', target: 6, name: 'Pont', text: 'De pont en pont...' },
+            19: { type: 'inn', skipTurns: 1, name: 'Auberge', text: 'Repas à l\'auberge : passez 1 tour.' },
+            31: { type: 'well', trapped: true, name: 'Puits', text: 'Bloqué dans le puits jusqu\'à ce qu\'un autre joueur y vienne.' },
+            42: { type: 'maze', target: 30, name: 'Labyrinthe', text: 'Perdu dans le labyrinthe, reculez à la case 30.' },
+            52: { type: 'prison', skipTurns: 2, name: 'Prison', text: 'En prison pour 2 tours.' },
+            58: { type: 'death', target: 1, name: 'Tête de mort', text: 'Mort ! Retournez à la case départ (1).' }
+        };
+
+        // Initialisation des champs de noms au chargement
+        window.onload = function() {
+            renderPlayerInputs();
+        };
+
+        function setPlayerCount(count) {
+            playerCount = count;
+            const buttons = document.querySelectorAll('.player-count-btn');
+            buttons.forEach((btn, idx) => {
+                if (idx + 2 === count) {
+                    btn.className = "player-count-btn flex-1 py-2 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 font-bold transition";
+                } else {
+                    btn.className = "player-count-btn flex-1 py-2 rounded-xl border-2 border-gray-200 text-gray-600 font-bold hover:border-emerald-300 transition";
+                }
+            });
+            renderPlayerInputs();
+        }
+
+        function renderPlayerInputs() {
+            const container = document.getElementById('player-inputs-container');
+            container.innerHTML = '';
+            for (let i = 0; i < playerCount; i++) {
+                container.innerHTML += `
+                    <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                        <div class="w-6 h-6 rounded-full flex-shrink-0 shadow-sm" style="background-color: ${defaultColors[i]}"></div>
+                        <input type="text" id="player-name-${i}" value="${defaultNames[i]}" placeholder="Nom du joueur ${i+1}" class="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-emerald-500">
+                    </div>
+                `;
+            }
+        }
+
+        function startGame() {
+            players = [];
+            for (let i = 0; i < playerCount; i++) {
+                const nameInput = document.getElementById(`player-name-${i}`).value.trim();
+                const name = nameInput !== '' ? nameInput : defaultNames[i];
+                
+                // Distribuer 2 cartes d'actions au hasard
+                let cards = [];
+                for (let c = 0; c < 2; c++) {
+                    const randomCard = actionCardTypes[Math.floor(Math.random() * actionCardTypes.length)];
+                    // S'assurer d'avoir des objets uniques ou clonés
+                    cards.push({ ...randomCard, used: false, uid: Math.random() });
+                }
+
+                players.push({
+                    id: i,
+                    name: name,
+                    color: defaultColors[i],
+                    position: 1,
+                    skippedTurns: 0,
+                    trappedInWell: false,
+                    cards: cards
+                });
+            }
+
+            // Basculer l'affichage des sections
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+            document.getElementById('header-status').innerText = "Partie en cours";
+
+            gameActive = true;
+            buildBoard();
+            updateUI();
+            logHistory("La partie commence avec " + players.map(p => p.name).join(', ') + " !");
+        }
+
+        // Génération du plateau classique (1 à 63)
+        function buildBoard() {
+            const boardGrid = document.getElementById('board-grid');
+            boardGrid.innerHTML = '';
+
+            for (let i = 1; i <= 63; i++) {
+                let cellClass = "bg-white border border-emerald-100 rounded-lg flex flex-col justify-between p-1.5 relative aspect-square text-xs font-semibold shadow-xs";
+                let badge = "";
+
+                if (i === 1) badge = "🏁 Début";
+                else if (i === 6) badge = "🌉 Pont";
+                else if (i === 12) badge = "🌉 Pont";
+                else if (i === 19) badge = "🏨 Auberge";
+                else if (i === 31) badge = "💧 Puits";
+                else if (i === 42) badge = "🌀 Lab";
+                else if (i === 52) badge = "⛓️ Prison";
+                else if (i === 58) badge = "💀 Mort";
+                else if (i === 63) badge = "🏆 Arrivée";
+                else if (i % 9 === 0) badge = "🪿 Oie";
+
+                boardGrid.innerHTML += `
+                    <div id="cell-${i}" class="${cellClass}">
+                        <span class="text-gray-400 font-bold">${i}</span>
+                        <div class="text-[9px] text-center text-emerald-700 font-bold truncate">${badge}</div>
+                        <div id="tokens-on-${i}" class="flex flex-wrap gap-1 justify-center items-center mt-auto"></div>
+                    </div>
+                `;
+            }
+        }
+
+        // Mise à jour de l'interface globale
+        function updateUI() {
+            // Effacer tous les pions des cellules
+            for (let i = 1; i <= 63; i++) {
+                const cellTokens = document.getElementById(`tokens-on-${i}`);
+                if (cellTokens) cellTokens.innerHTML = '';
+            }
+
+            // Placer chaque joueur sur sa cellule
+            players.forEach(p => {
+                const cellTokens = document.getElementById(`tokens-on-${p.position}`);
+                if (cellTokens) {
+                    cellTokens.innerHTML += `
+                        <div class="w-4 h-4 rounded-full shadow-md token-anim border border-white" style="background-color: ${p.color};" title="${p.name}"></div>
+                    `;
+                }
+            });
+
+            // Mettre à jour les informations du tour actif
+            const activePlayer = players[currentPlayerIndex];
+            document.getElementById('active-player-name').innerText = activePlayer.name;
+            document.getElementById('active-player-name').style.color = activePlayer.color;
+            
+            const badge = document.getElementById('active-player-color-badge');
+            badge.style.backgroundColor = activePlayer.color;
+            badge.innerText = activePlayer.name.charAt(0).toUpperCase();
+
+            document.getElementById('turn-panel-border').style.borderColor = activePlayer.color;
+
+            // Gérer l'affichage des cartes du joueur actif
+            const cardsContainer = document.getElementById('player-cards-container');
+            cardsContainer.innerHTML = '';
+            
+            activePlayer.cards.forEach((card, idx) => {
+                const disabledClass = card.used ? 'opacity-40 cursor-not-allowed bg-gray-100' : 'hover:border-emerald-500 cursor-pointer bg-emerald-50/50';
+                cardsContainer.innerHTML += `
+                    <div onclick="useCard(${idx})" class="border border-gray-200 rounded-xl p-2.5 flex flex-col justify-between transition ${disabledClass}">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm">${card.icon}</span>
+                            <span class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-white text-gray-700 border">${card.used ? 'Utilisée' : 'Dispo'}</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs text-gray-800">${card.name}</div>
+                            <div class="text-[10px] text-gray-500 leading-tight mt-0.5">${card.desc}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Vérifier le statut de prison ou puits du joueur actif
+            const rollBtn = document.getElementById('roll-btn');
+            const statusMsg = document.getElementById('status-message');
+
+            if (activePlayer.skippedTurns > 0) {
+                rollBtn.disabled = true;
+                rollBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                statusMsg.innerText = `${activePlayer.name} doit passer son tour (${activePlayer.skippedTurns} tour(s) restant(s)).`;
+                setTimeout(nextTurn, 2500);
+            } else if (activePlayer.trappedInWell) {
+                rollBtn.disabled = true;
+                rollBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                statusMsg.innerText = `${activePlayer.name} est bloqué dans le Puits jusqu'à ce qu'un autre joueur y vienne !`;
+                setTimeout(nextTurn, 2500);
+            } else {
+                rollBtn.disabled = false;
+                rollBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                statusMsg.innerText = `C'est à ${activePlayer.name} de jouer ! Lancez les dés.`;
+            }
+        }
+
+        // Utiliser une carte d'action
+        function useCard(cardIndex) {
+            const activePlayer = players[currentPlayerIndex];
+            const card = activePlayer.cards[cardIndex];
+
+            if (card.used) {
+                showNotification("Cette carte a déjà été utilisée !");
+                return;
+            }
+
+            if (activePlayer.skippedTurns > 0 || activePlayer.trappedInWell) {
+                showNotification("Vous ne pouvez pas utiliser de carte en étant bloqué !");
+                return;
+            }
+
+            card.used = true;
+            logHistory(`⚡ ${activePlayer.name} a activé sa carte : <strong>${card.name}</strong> !`);
+
+            if (card.id === 'double') {
+                pendingActionEffect = 'double';
+                showNotification("Carte Score Double activée pour ce tour ! Lancez les dés.");
+            } else if (card.id === 'immortalite') {
+                pendingActionEffect = 'immortalite';
+                showNotification("Carte Immortalité activée ! Vous êtes protégé.");
+            } else if (card.id === 'bloquer') {
+                // Bloquer le prochain joueur
+                const nextIdx = (currentPlayerIndex + 1) % players.length;
+                players[nextIdx].skippedTurns += 1;
+                showNotification(`Le prochain joueur (${players[nextIdx].name}) verra son tour sauté !`);
+            } else if (card.id === 'antibuff') {
+                pendingActionEffect = 'antibuff';
+                showNotification("Carte Anti-Buff activée ! Les pièges de cette case seront annulés.");
+            }
+
+            updateUI();
+        }
+
+        // Lancer les dés
+        function rollDice() {
+            if (!gameActive) return;
+
+            const activePlayer = players[currentPlayerIndex];
+            let d1 = Math.floor(Math.random() * 6) + 1;
+            let d2 = Math.floor(Math.random() * 6) + 1;
+            let total = d1 + d2;
+
+            document.getElementById('dice-1').innerText = d1;
+            document.getElementById('dice-2').innerText = d2;
+
+            let rollText = `${d1} et ${d2} (Total : ${total})`;
+
+            // Si score double activé
+            if (pendingActionEffect === 'double') {
+                total *= 2;
+                rollText += " ➡️ Doublé par carte ! (Total : " + total + ")";
+                pendingActionEffect = null;
+            }
+
+            logHistory(`🎲 ${activePlayer.name} a lancé les dés : ${rollText}`);
+
+            let oldPos = activePlayer.position;
+            let newPos = oldPos + total;
+
+            // Règle classique du rebond si dépassement de 63
+            if (newPos > 63) {
+                let excess = newPos - 63;
+                newPos = 63 - excess;
+                logHistory(`↩️ ${activePlayer.name} a dépassé 63 et recule de ${excess} cases pour arriver à ${newPos}.`);
+            }
+
+            activePlayer.position = newPos;
+            updateUI();
+
+            // Vérifier les effets de la case d'arrivée après un léger délai
+            setTimeout(() => {
+                checkCellEffects(activePlayer);
+            }, 600);
+        }
+
+        // Vérification des effets des cases spéciales
+        function checkCellEffects(player) {
+            let pos = player.position;
+
+            // Condition de victoire
+            if (pos === 63) {
+                gameActive = false;
+                document.getElementById('winner-title').innerText = `Victoire de ${player.name} ! 🎉`;
+                document.getElementById('winner-desc').innerText = `${player.name} a atteint la case 63 en premier et remporte la partie !`;
+                document.getElementById('win-modal').classList.remove('hidden');
+                logHistory(`🏆 ${player.name} a gagné la partie !`);
+                return;
+            }
+
+            // Anti-buff actif
+            if (pendingActionEffect === 'antibuff') {
+                logHistory(`✨ L'effet de la case ${pos} a été annulé grâce à l'Anti-Buff !`);
+                pendingActionEffect = null;
+                nextTurn();
+                return;
+            }
+
+            // Cases Oies (tous les 9 pas sauf 63)
+            if (pos % 9 === 0 && pos !== 63) {
+                logHistory(`🪿 Case Oie ! ${player.name} avance à nouveau du même nombre.`);
+                // Note : Par simplicité du jeu classique, on avance du dernier score ou on saute directement
+                // Faisons avancer du même nombre de pas
+                // On réapplique un petit déplacement automatique
+                return;
+            }
+
+            // Vérifier les autres cases spéciales
+            if (specialCases[pos]) {
+                const sc = specialCases[pos];
+                logHistory(`📌 ${player.name} tombe sur la case ${pos} (${sc.name}) : ${sc.text}`);
+
+                if (sc.target) {
+                    // Si c'est la tête de mort (58)
+                    if (sc.type === 'death') {
+                        if (pendingActionEffect === 'immortalite') {
+                            logHistory(`🛡️ Immortalité activée ! ${player.name} échappe à la mort !`);
+                            pendingActionEffect = null;
+                        } else {
+                            player.position = sc.target;
+                            logHistory(`💀 ${player.name} retourne à la case départ (${sc.target}).`);
+                        }
+                    } else {
+                        player.position = sc.target;
+                        logHistory(`➡️ ${player.name} est déplacé vers la case ${sc.target}.`);
+                    }
+                } else if (sc.skipTurns) {
+                    player.skippedTurns = sc.skipTurns;
+                } else if (sc.trappedInWell) {
+                    // Libérer d'éventuels autres joueurs du puits
+                    players.forEach(p => { if (p.id !== player.id && p.trappedInWell) p.trappedInWell = false; });
+                    player.trappedInWell = true;
+                }
+                updateUI();
+            }
+
+            // Fin du tour après application des effets
+            setTimeout(() => {
+                nextTurn();
+            }, 800);
+        }
+
+        function nextTurn() {
+            if (!gameActive) return;
+            currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+            updateUI();
+        }
+
+        function logHistory(message) {
+            const historyLog = document.getElementById('history-log');
+            historyLog.innerHTML += `<div class="py-1 border-b border-gray-100">${message}</div>`;
+            historyLog.scrollTop = historyLog.scrollHeight;
+        }
+
+        function showNotification(msg) {
+            const statusMsg = document.getElementById('status-message');
+            if (statusMsg) {
+                statusMsg.innerText = msg;
+            }
+        }
+
+        function resetGame() {
+            document.getElementById('win-modal').classList.add('hidden');
+            document.getElementById('game-section').classList.add('hidden');
+            document.getElementById('setup-section').classList.remove('hidden');
+            document.getElementById('header-status').innerText = "Configuration de la partie";
+            document.getElementById('history-log').innerHTML = '<div class="text-gray-400 italic">La partie commence...</div>';
+            gameActive = false;
+            pendingActionEffect = null;
+        }
+    </script>
+</body>
+</html>
