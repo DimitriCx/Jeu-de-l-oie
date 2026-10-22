@@ -18,3 +18,7 @@ que je souhaiterais rajouter:
   - Anti-buff= empêche l'effet de la case sur laquelle est tombé le joueur lorsque la carte est utilisé
 
 Il serait bien que chaque joueur puisse voir ses cartes avec leur description.
+
+## **Prompt2:**
+Peux tu modifier le code pour que lorsque un joueur possède une carte anti-buff et qu'il tombe sur une case négative on lui propose de l'utiliser.
+De plus, elle ne doit pas marcher sur la carte de mort.
