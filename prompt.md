@@ -16,4 +16,5 @@ que je souhaiterais rajouter:
   - Immortalité= ramène à la vie le joueur s'il tombe sur la carte de mort
   - Bloquer= saute le tour du prochain joueur lorsque la carte est utilisé
   - Anti-buff= empêche l'effet de la case sur laquelle est tombé le joueur lorsque la carte est utilisé
+
 Il serait bien que chaque joueur puisse voir ses cartes avec leur description.
