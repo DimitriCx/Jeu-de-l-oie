@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de l'Oie Complet</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        /* Custom scrollbar for history and cards */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-emerald-50 to-teal-100 min-h-full flex flex-col text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md shadow-sm border-b border-emerald-100 py-4 px-6 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <span class="text-3xl">🪿</span>
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Jeu de l'Oie Ultime</h1>
+            </div>
+            <div id="game-header-status" class="hidden text-sm font-medium bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full border border-emerald-200 shadow-sm">
+                Tour de : <span id="current-player-name" class="font-bold"></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col">
+
+        <!-- SETUP SCREEN -->
+        <section id="setup-screen" class="bg-white rounded-2xl shadow-xl border border-emerald-100 p-6 md:p-10 max-w-2xl mx-auto my-auto w-full transition-all">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Configuration de la Partie</h2>
+                <p class="text-slate-500">Préparez vos pions et vos cartes d'action !</p>
+            </div>
+
+            <div class="mb-6">
+                <label for="player-count" class="block text-sm font-semibold text-slate-700 mb-2">Nombre de joueurs (2 à 4) :</label>
+                <select id="player-count" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-medium">
+                    <option value="2">2 Joueurs</option>
+                    <option value="3">3 Joueurs</option>
+                    <option value="4">4 Joueurs</option>
+                </select>
+            </div>
+
+            <div id="player-inputs-container" class="space-y-4 mb-8">
+                <!-- Dynamically generated inputs -->
+            </div>
+
+            <button id="start-game-btn" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-600/20 transform active:scale-95 transition-all text-lg">
+                Lancer le Jeu 🚀
+            </button>
+        </section>
+
+        <!-- GAME BOARD & DASHBOARD SCREEN -->
+        <section id="game-screen" class="hidden flex-col gap-6 w-full flex-grow">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
+                
+                <!-- Left/Main Column: Board & Dice control -->
+                <div class="lg:col-span-2 flex flex-col gap-6">
+                    
+                    <!-- Board Card -->
+                    <div class="bg-white rounded-2xl shadow-xl border border-emerald-100 p-4 md:p-6 flex flex-col items-center">
+                        <div class="flex justify-between items-center w-full mb-4">
+                            <h3 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                                <span>🗺️</span> Plateau de l'Oie (1 - 63)
+                            </h3>
+                            <div class="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                                Case 63 = Victoire exacte
+                            </div>
+                        </div>
+
+                        <!-- Grid Board Display (63 cases) -->
+                        <div id="board-grid" class="grid grid-cols-7 sm:grid-cols-9 gap-1.5 md:gap-2 w-full max-w-4xl p-2 bg-slate-50 rounded-xl border border-slate-200">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Dice & Turn Controls Card -->
+                    <div class="bg-white rounded-2xl shadow-xl border border-emerald-100 p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+                        <div class="flex items-center gap-4">
+                            <div id="dice-container" class="flex gap-3">
+                                <div class="w-16 h-16 rounded-xl bg-slate-100 border-2 border-slate-300 flex items-center justify-center text-3xl font-bold shadow-inner text-slate-700" id="die-1">🎲</div>
+                                <div class="w-16 h-16 rounded-xl bg-slate-100 border-2 border-slate-300 flex items-center justify-center text-3xl font-bold shadow-inner text-slate-700" id="die-2">🎲</div>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-lg" id="turn-action-title">Lancer les dés</h4>
+                                <p class="text-sm text-slate-500" id="turn-action-desc">C'est au tour du joueur actuel de lancer les dés.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3">
+                            <button id="roll-dice-btn" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold px-6 py-3 rounded-xl shadow-md shadow-emerald-600/20 transform active:scale-95 transition-all flex items-center gap-2">
+                                <span>🎲</span> Lancer les dés
+                            </button>
+                            <button id="use-double-score-btn" disabled class="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-4 py-3 rounded-xl shadow-md transition-all text-sm flex items-center gap-1">
+                                <span>⚡</span> Score Double
+                            </button>
+                            <button id="use-switch-btn" disabled class="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-4 py-3 rounded-xl shadow-md transition-all text-sm flex items-center gap-1">
+                                <span>🔄</span> Switch
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Players Status & History -->
+                <div class="flex flex-col gap-6">
+                    
+                    <!-- Players Cards & Inventory -->
+                    <div class="bg-white rounded-2xl shadow-xl border border-emerald-100 p-5 flex flex-col gap-4">
+                        <h3 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                            <span>👥</span> Joueurs & Cartes d'Action
+                        </h3>
+                        <div id="players-sidebar-container" class="space-y-4">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- History Log Card -->
+                    <div class="bg-white rounded-2xl shadow-xl border border-emerald-100 p-5 flex flex-col flex-grow min-h-[250px]">
+                        <h3 class="text-lg font-bold text-slate-700 flex items-center gap-2 mb-3">
+                            <span>📜</span> Historique de la Partie
+                        </h3>
+                        <div id="history-log" class="bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-y-auto flex-grow max-h-[280px] space-y-2 text-sm">
+                            <!-- Log messages go here -->
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Custom Modal for Alerts / Prompts / Win / Anti-buff / Immortalité -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-md w-full p-6 text-center transform transition-all scale-100">
+            <div id="modal-icon" class="text-5xl mb-4">✨</div>
+            <h3 id="modal-title" class="text-xl font-bold text-slate-800 mb-2">Titre</h3>
+            <p id="modal-message" class="text-slate-600 mb-6 text-sm leading-relaxed">Message descriptif...</p>
+            <div id="modal-actions" class="flex justify-center gap-3">
+                <button id="modal-ok-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow transition-all w-full">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Logic -->
+    <script>
+        // --- CONSTANTS & CONFIGURATIONS ---
+        const PLAYER_COLORS = [
+            { name: 'Rouge', bg: 'bg-rose-500', text: 'text-rose-600', border: 'border-rose-500', hex: '#f43f5e' },
+            { name: 'Bleu', bg: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-500', hex: '#3b82f6' },
+            { name: 'Vert', bg: 'bg-emerald-500', text: 'text-emerald-600', border: 'border-emerald-500', hex: '#10b981' },
+            { name: 'Violet', bg: 'bg-purple-500', text: 'text-purple-600', border: 'border-purple-500', hex: '#a855f7' }
+        ];
+
+        const ACTION_CARDS_DEF = [
+            { id: 'double_score', name: 'Score Double', desc: 'Double le résultat des dés lors du tour.', icon: '⚡' },
+            { id: 'immortalite', name: 'Immortalité', desc: 'Ramène à la vie le joueur s\'il tombe sur la case de mort (58).', icon: '🛡️' },
+            { id: 'bloquer', name: 'Bloquer', desc: 'Saute le tour du prochain joueur.', icon: '🚫' },
+            { id: 'anti_buff', name: 'Anti-buff', desc: 'Empêche l\'effet négatif d\'une case (sauf la mort).', icon: '✨' },
+            { id: 'switch', name: 'Switch', desc: 'Échange votre place avec le joueur le plus avancé.', icon: '🔄' }
+        ];
+
+        const BOARD_SPECIALS = {
+            6: { type: 'pont', target: 12, name: 'Le Pont', desc: 'De 6, on va à 12 en un clin d\'œil !', icon: '🌉' },
+            19: { type: 'hotel', skipTurns: 1, name: 'L\'Hôtel', desc: 'Reposez-vous 1 tour bien mérité.', icon: '🏨' },
+            31: { type: 'puits', skipTurns: 2, name: 'Le Puits', desc: 'Bloqué dans le puits pendant 2 tours !', icon: '🕳️' },
+            42: { type: 'labyrinthe', target: 30, name: 'Le Labyrinthe', desc: 'Perdu dans le labyrinthe, retour à la case 30.', icon: '🌀' },
+            52: { type: 'prison', skipTurns: 2, name: 'La Prison', desc: 'En cellule pour 2 tours !', icon: '⛓️' },
+            58: { type: 'mort', target: 1, name: 'La Mort', desc: 'Fatale ! Retour case départ (sauf Immortalité).', icon: '💀' }
+        };
+
+        // --- GAME STATE ---
+        let gameState = {
+            players: [],
+            currentPlayerIndex: 0,
+            gameStarted: false,
+            waitingForInput: false,
+            diceRolledThisTurn: false
+        };
+
+        // --- DOM ELEMENTS ---
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const playerCountSelect = document.getElementById('player-count');
+        const playerInputsContainer = document.getElementById('player-inputs-container');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const boardGrid = document.getElementById('board-grid');
+        const currentPlayerNameEl = document.getElementById('current-player-name');
+        const gameHeaderStatus = document.getElementById('game-header-status');
+        const rollDiceBtn = document.getElementById('roll-dice-btn');
+        const useDoubleScoreBtn = document.getElementById('use-double-score-btn');
+        const useSwitchBtn = document.getElementById('use-switch-btn');
+        const die1El = document.getElementById('die-1');
+        const die2El = document.getElementById('die-2');
+        const playersSidebarContainer = document.getElementById('players-sidebar-container');
+        const historyLog = document.getElementById('history-log');
+
+        const customModal = document.getElementById('custom-modal');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalActions = document.getElementById('modal-actions');
+        const modalOkBtn = document.getElementById('modal-ok-btn');
+
+        // --- SETUP SCREEN LOGIC ---
+        function updatePlayerInputs() {
+            const count = parseInt(playerCountSelect.value);
+            playerInputsContainer.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const color = PLAYER_COLORS[i];
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200';
+                div.innerHTML = `
+                    <div class="w-6 h-6 rounded-full ${color.bg} flex-shrink-0 shadow-sm"></div>
+                    <div class="flex-grow">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Joueur ${i + 1} (${color.name})</label>
+                        <input type="text" id="player-name-${i}" value="Joueur ${i + 1}" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium">
+                    </div>
+                `;
+                playerInputsContainer.appendChild(div);
+            }
+        }
+
+        playerCountSelect.addEventListener('change', updatePlayerInputs);
+        updatePlayerInputs();
+
+        // --- MODAL HELPER ---
+        function showModal(title, message, icon = '✨', buttonsHtml = null) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalIcon.textContent = icon;
+            
+            modalActions.innerHTML = '';
+            if (buttonsHtml) {
+                modalActions.innerHTML = buttonsHtml;
+            } else {
+                const okBtn = document.createElement('button');
+                okBtn.className = 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow transition-all w-full';
+                okBtn.textContent = 'OK';
+                okBtn.onclick = closeModal;
+                modalActions.appendChild(okBtn);
+            }
+            customModal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            customModal.classList.add('hidden');
+        }
+
+        // --- GAME INITIALIZATION ---
+        startGameBtn.addEventListener('click', () => {
+            const count = parseInt(playerCountSelect.value);
+            gameState.players = [];
+
+            for (let i = 0; i < count; i++) {
+                const nameInput = document.getElementById(`player-name-${i}`);
+                const name = nameInput && nameInput.value.trim() !== '' ? nameInput.value.trim() : `Joueur ${i + 1}`;
+                
+                // Distribute 2 random cards
+                const hand = [];
+                for (let c = 0; c < 2; c++) {
+                    const randomCard = ACTION_CARDS_DEF[Math.floor(Math.random() * ACTION_CARDS_DEF.length)];
+                    hand.push({ ...randomCard, instanceId: Math.random().toString(36).substr(2, 9), used: false });
+                }
+
+                gameState.players.push({
+                    id: i,
+                    name: name,
+                    color: PLAYER_COLORS[i],
+                    position: 0, // 0 means before start, actual board is 1 to 63
+                    skipTurns: 0,
+                    hand: hand,
+                    activeDoubleScore: false
+                });
+            }
+
+            gameState.currentPlayerIndex = 0;
+            gameState.gameStarted = true;
+            gameState.diceRolledThisTurn = false;
+
+            setupScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            gameScreen.classList.add('flex');
+            gameHeaderStatus.classList.remove('hidden');
+
+            addHistoryLog(`La partie commence avec ${count} joueurs ! 🎮`);
+            renderBoard();
+            updateUI();
+        });
+
+        // --- RENDER BOARD ---
+        function renderBoard() {
+            boardGrid.innerHTML = '';
+            // Board from 1 to 63
+            for (let i = 1; i <= 63; i++) {
+                const cellDiv = document.createElement('div');
+                cellDiv.className = 'aspect-square rounded-xl border border-slate-200 bg-white flex flex-col justify-between p-1 relative shadow-sm overflow-hidden text-xs';
+                cellDiv.id = `cell-${i}`;
+
+                // Cell number & special icon badge
+                let badge = '';
+                let bgSpecial = 'bg-white';
+                if (i === 63) { bgSpecial = 'bg-amber-100 border-amber-300 font-bold'; badge = '🏆'; }
+                else if (i === 6) { bgSpecial = 'bg-blue-50 border-blue-200'; badge = '🌉'; }
+                else if (i === 19) { bgSpecial = 'bg-indigo-50 border-indigo-200'; badge = '🏨'; }
+                else if (i === 31) { bgSpecial = 'bg-sky-50 border-sky-200'; badge = '🕳️'; }
+                else if (i === 42) { bgSpecial = 'bg-teal-50 border-teal-200'; badge = '🌀'; }
+                else if (i === 52) { bgSpecial = 'bg-slate-100 border-slate-300'; badge = '⛓️'; }
+                else if (i === 58) { bgSpecial = 'bg-rose-50 border-rose-200'; badge = '💀'; }
+                else if (i % 9 === 0 && i < 63) { bgSpecial = 'bg-emerald-50 border-emerald-200'; badge = '🪿'; }
+
+                cellDiv.className += ` ${bgSpecial}`;
+
+                cellDiv.innerHTML = `
+                    <div class="flex justify-between items-start w-full">
+                        <span class="font-bold text-[10px] text-slate-400">${i}</span>
+                        <span class="text-[10px]">${badge}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1 justify-center items-center my-auto" id="tokens-on-cell-${i}">
+                        <!-- Player tokens go here -->
+                    </div>
+                `;
+
+                boardGrid.appendChild(cellDiv);
+            }
+            updateTokensOnBoard();
+        }
+
+        function updateTokensOnBoard() {
+            // Clear all tokens containers
+            for (let i = 1; i <= 63; i++) {
+                const container = document.getElementById(`tokens-on-cell-${i}`);
+                if (container) container.innerHTML = '';
+            }
+
+            // Place tokens
+            gameState.players.forEach(player => {
+                if (player.position > 0 && player.position <= 63) {
+                    const container = document.getElementById(`tokens-on-cell-${player.position}`);
+                    if (container) {
+                        const token = document.createElement('div');
+                        token.className = `w-4 h-4 rounded-full ${player.color.bg} border-2 border-white shadow-md transform hover:scale-125 transition-transform`;
+                        token.title = player.name;
+                        container.appendChild(token);
+                    }
+                }
+            });
+        }
+
+        // --- UPDATE UI DASHBOARD ---
+        function updateUI() {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            currentPlayerNameEl.textContent = currentPlayer.name;
+            currentPlayerNameEl.className = `font-bold ${currentPlayer.color.text}`;
+
+            // Update action buttons state
+            const hasDoubleScoreCard = currentPlayer.hand.some(c => c.id === 'double_score' && !c.used);
+            useDoubleScoreBtn.disabled = !hasDoubleScoreCard || gameState.diceRolledThisTurn;
+            if (currentPlayer.activeDoubleScore) {
+                useDoubleScoreBtn.classList.add('ring-4', 'ring-amber-300');
+                useDoubleScoreBtn.textContent = '⚡ Score Double (Actif)';
+            } else {
+                useDoubleScoreBtn.classList.remove('ring-4', 'ring-amber-300');
+                useDoubleScoreBtn.textContent = '⚡ Score Double';
+            }
+
+            const hasSwitchCard = currentPlayer.hand.some(c => c.id === 'switch' && !c.used);
+            useSwitchBtn.disabled = !hasSwitchCard || gameState.diceRolledThisTurn;
+
+            // Render players sidebar
+            playersSidebarContainer.innerHTML = '';
+            gameState.players.forEach((p, idx) => {
+                const isCurrent = idx === gameState.currentPlayerIndex;
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border transition-all ${isCurrent ? 'border-emerald-500 bg-emerald-50/50 shadow-md ring-2 ring-emerald-400/30' : 'border-slate-200 bg-slate-50'}`;
+                
+                let statusText = `Case : ${p.position}/63`;
+                if (p.skipTurns > 0) statusText += ` (Bloqué : ${p.skipTurns} tour${p.skipTurns > 1 ? 's' : ''})`;
+
+                let cardsHtml = p.hand.map(cardItem => `
+                    <div class="text-xs bg-white border border-slate-200 px-2 py-1 rounded-lg flex items-center justify-between gap-1 shadow-sm ${cardItem.used ? 'opacity-40 line-through' : ''}">
+                        <span class="font-medium">${cardItem.icon} ${cardItem.name}</span>
+                        <span class="text-[10px] text-slate-400 truncate max-w-[120px]" title="${cardItem.desc}">${cardItem.desc}</span>
+                    </div>
+                `).join('');
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3.5 h-3.5 rounded-full ${p.color.bg}"></div>
+                            <span class="font-bold text-slate-800">${p.name}</span>
+                            ${isCurrent ? '<span class="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full">Actuel</span>' : ''}
+                        </div>
+                        <span class="text-xs font-semibold text-slate-600">${statusText}</span>
+                    </div>
+                    <div class="space-y-1 mt-2">
+                        <p class="text-[11px] font-semibold text-slate-400">Cartes d'action (${p.hand.filter(c => !c.used).length} dispo) :</p>
+                        <div class="space-y-1">${cardsHtml}</div>
+                    </div>
+                `;
+                playersSidebarContainer.appendChild(card);
+            });
+
+            updateTokensOnBoard();
+        }
+
+        function addHistoryLog(message) {
+            const p = document.createElement('div');
+            p.className = 'text-slate-600 pb-1 border-b border-slate-100 last:border-0';
+            p.innerHTML = `<span class="text-slate-400 text-xs">${new Date().toLocaleTimeString()}</span> ${message}`;
+            historyLog.prepend(p);
+        }
+
+        // --- ACTION CARDS BUTTON HANDLERS ---
+        useDoubleScoreBtn.addEventListener('click', () => {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            const card = currentPlayer.hand.find(c => c.id === 'double_score' && !c.used);
+            if (card) {
+                card.used = true;
+                currentPlayer.activeDoubleScore = true;
+                addHistoryLog(`⚡ <b>${currentPlayer.name}</b> active sa carte <b>Score Double</b> pour ce tour !`);
+                updateUI();
+            }
+        });
+
+        useSwitchBtn.addEventListener('click', () => {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            const card = currentPlayer.hand.find(c => c.id === 'switch' && !c.used);
+            if (card) {
+                // Find furthest player ahead
+                let furthestPlayer = null;
+                let maxPos = -1;
+                gameState.players.forEach(p => {
+                    if (p.id !== currentPlayer.id && p.position > maxPos) {
+                        maxPos = p.position;
+                        furthestPlayer = p;
+                    }
+                });
+
+                if (furthestPlayer && furthestPlayer.position > currentPlayer.position) {
+                    card.used = true;
+                    const tempPos = currentPlayer.position;
+                    currentPlayer.position = furthestPlayer.position;
+                    furthestPlayer.position = tempPos;
+                    addHistoryLog(`🔄 <b>${currentPlayer.name}</b> utilise sa carte <b>Switch</b> et échange sa place (case ${tempPos}) avec <b>${furthestPlayer.name}</b> (case ${furthestPlayer.position}) !`);
+                    updateUI();
+                } else {
+                    showModal("Switch impossible", "Vous êtes déjà le joueur le plus avancé ou personne ne vous devance !", "⚠️");
+                }
+            }
+        });
+
+        // --- GAMEPLAY MECHANICS ---
+        rollDiceBtn.addEventListener('click', () => {
+            if (gameState.waitingForInput) return;
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+
+            // Check if player is stuck in prison/puits/hotel
+            if (currentPlayer.skipTurns > 0) {
+                currentPlayer.skipTurns--;
+                addHistoryLog(`⏳ <b>${currentPlayer.name}</b> passe son tour (encore ${currentPlayer.skipTurns} tour(s) bloqué).`);
+                nextTurn();
+                return;
+            }
+
+            gameState.diceRolledThisTurn = true;
+            rollDiceBtn.disabled = true;
+
+            // Roll two dice (1-6)
+            let d1 = Math.floor(Math.random() * 6) + 1;
+            let d2 = Math.floor(Math.random() * 6) + 1;
+            
+            die1El.textContent = d1;
+            die2El.textContent = d2;
+
+            let totalRoll = d1 + d2;
+            let rollMsg = `🎲 <b>${currentPlayer.name}</b> lance les dés et obtient <b>${d1}</b> et <b>${d2}</b> (Total : ${totalRoll})`;
+
+            if (currentPlayer.activeDoubleScore) {
+                totalRoll *= 2;
+                currentPlayer.activeDoubleScore = false;
+                rollMsg += ` ⚡ <span class="text-amber-600 font-bold">Doublé par carte Score Double ! Nouveau total : ${totalRoll}</span>`;
+            }
+
+            addHistoryLog(rollMsg);
+
+            // Calculate new position
+            let oldPos = currentPlayer.position;
+            // If start is 0, first move starts from 0 + totalRoll
+            let newPos = oldPos === 0 ? totalRoll : oldPos + totalRoll;
+
+            // Exact win check on 63
+            if (newPos > 63) {
+                let overflow = newPos - 63;
+                newPos = 63 - overflow;
+                addHistoryLog(`↩️ Dépassement de la case 63 ! <b>${currentPlayer.name}</b> recule de ${overflow} case(s) pour atterrir sur la case <b>${newPos}</b>.`);
+            }
+
+            currentPlayer.position = newPos;
+            updateTokensOnBoard();
+
+            // Check what happens on the new cell after a short animation delay
+            setTimeout(() => {
+                handleCellLanding(currentPlayer, newPos);
+            }, 600);
+        });
+
+        function handleCellLanding(player, pos) {
+            // Check Victory
+            if (pos === 63) {
+                showModal("Victoire Légendaire ! 🏆", `${player.name} a atteint la case 63 et remporte la partie de l'Oie !`, "🏆", `
+                    <button onclick="location.reload()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow transition-all w-full">Rejouer une partie</button>
+                `);
+                addHistoryLog(`🏆 <b>${player.name}</b> remporte la victoire en arrivant sur la case 63 !`);
+                return;
+            }
+
+            // Check Goose rule (every 9th case except 63: 9, 18, 27, 36, 45, 54)
+            if (pos % 9 === 0 && pos < 63) {
+                addHistoryLog(`🪿 <b>${player.name}</b> tombe sur une case <b>Oie (${pos})</b> ! Le déplacement est doublé.`);
+                // For simplicity, move forward by the same amount or jump to next goose. Let's move forward by a standard step or jump to next. Standard rule: advance by the same number again.
+                // Let's implement standard rule: advance by the dice total or jump +9. Let's do jump +9 or re-advance. Let's jump to next multiple or advance. Let's advance by 9 or jump. Let's make it advance smoothly.
+                // Actually classical rule: "De l'oie en oie et l'on va de double en double". Let's advance by another 9 or just advance by 9 steps.
+                let nextOiePos = Math.min(63, pos + 9);
+                player.position = nextOiePos;
+                addHistoryLog(`🪿 L'Oie mène <b>${player.name}</b> directement à la case <b>${nextOiePos}</b> !`);
+                updateTokensOnBoard();
+                if (nextOiePos === 63) {
+                    handleCellLanding(player, 63);
+                    return;
+                }
+            }
+
+            // Check Special Board Cases
+            if (BOARD_SPECIALS[pos]) {
+                const special = BOARD_SPECIALS[pos];
+
+                if (special.type === 'pont') {
+                    player.position = special.target;
+                    addHistoryLog(`🌉 <b>${player.name}</b> traverse <b>Le Pont</b> et arrive sur la case <b>${special.target}</b> !`);
+                    updateTokensOnBoard();
+                } 
+                else if (special.type === 'hotel' || special.type === 'puits' || special.type === 'prison') {
+                    // Negative / trapping buff case! Check if player has Anti-buff card
+                    const antiBuffCard = player.hand.find(c => c.id === 'anti_buff' && !c.used);
+
+                    if (antiBuffCard) {
+                        // Prompt user to use Anti-buff card
+                        gameState.waitingForInput = true;
+                        showModal(
+                            `Case Négative : ${special.name} ⚠️`,
+                            `${player.name} est tombé sur ${special.name} (${special.desc}). Vous possédez une carte Anti-buff. Souhaitez-vous l'utiliser pour annuler cet effet ?`,
+                            special.icon,
+                            `
+                            <button id="use-antibuff-yes" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow transition-all flex-1">Oui, utiliser l'Anti-buff</button>
+                            <button id="use-antibuff-no" class="bg-slate-300 hover:bg-slate-400 text-slate-700 font-bold px-4 py-2.5 rounded-xl shadow transition-all flex-1">Non, subir l'effet</button>
+                            `
+                        );
+
+                        document.getElementById('use-antibuff-yes').onclick = () => {
+                            antiBuffCard.used = true;
+                            closeModal();
+                            gameState.waitingForInput = false;
+                            addHistoryLog(`✨ <b>${player.name}</b> utilise sa carte <b>Anti-buff</b> et annule l'effet de ${special.name} !`);
+                            updateUI();
+                            nextTurn();
+                        };
+
+                        document.getElementById('use-antibuff-no').onclick = () => {
+                            closeModal();
+                            gameState.waitingForInput = false;
+                            applyNegativeBuff(player, special);
+                            nextTurn();
+                        };
+                        return; // Wait for user decision
+                    } else {
+                        applyNegativeBuff(player, special);
+                    }
+                }
+                else if (special.type === 'labyrinthe') {
+                    const antiBuffCard = player.hand.find(c => c.id === 'anti_buff' && !c.used);
+                    if (antiBuffCard) {
+                        gameState.waitingForInput = true;
+                        showModal(
+                            `Case Négative : Le Labyrinthe 🌀`,
+                            `${player.name} est tombé sur Le Labyrinthe (retour case 30). Vous possédez une carte Anti-buff. Souhaitez-vous l'utiliser ?`,
+                            '🌀',
+                            `
+                            <button id="use-antibuff-yes" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow transition-all flex-1">Oui, utiliser</button>
+                            <button id="use-antibuff-no" class="bg-slate-300 hover:bg-slate-400 text-slate-700 font-bold px-4 py-2.5 rounded-xl shadow transition-all flex-1">Non</button>
+                            `
+                        );
+                        document.getElementById('use-antibuff-yes').onclick = () => {
+                            antiBuffCard.used = true;
+                            closeModal();
+                            gameState.waitingForInput = false;
+                            addHistoryLog(`✨ <b>${player.name}</b> utilise son <b>Anti-buff</b> pour éviter Le Labyrinthe !`);
+                            updateUI();
+                            nextTurn();
+                        };
+                        document.getElementById('use-antibuff-no').onclick = () => {
+                            closeModal();
+                            gameState.waitingForInput = false;
+                            player.position = special.target;
+                            addHistoryLog(`🌀 <b>${player.name}</b> est pris dans <b>Le Labyrinthe</b> et recule à la case <b>${special.target}</b> !`);
+                            updateTokensOnBoard();
+                            nextTurn();
+                        };
+                        return;
+                    } else {
+                        player.position = special.target;
+                        addHistoryLog(`🌀 <b>${player.name}</b> est pris dans <b>Le Labyrinthe</b> et recule à la case <b>${special.target}</b> !`);
+                        updateTokensOnBoard();
+                    }
+                }
+                else if (special.type === 'mort') {
+                    // Case de mort (58). Anti-buff DOES NOT work on death. Only Immortalité works!
+                    const immortalCard = player.hand.find(c => c.id === 'immortalite' && !c.used);
+
+                    if (immortalCard) {
+                        immortalCard.used = true;
+                        player.position = 1;
+                        addHistoryLog(`💀 <b>${player.name}</b> tombe sur la <b>Case de Mort</b>, mais sa carte <b>Immortalité</b> le protège ! Il est ramené à la vie à la case <b>1</b> (au lieu d'être éliminé/bloqué).`);
+                        updateTokensOnBoard();
+                    } else {
+                        player.position = special.target;
+                        addHistoryLog(`💀 Fatale ! <b>${player.name}</b> tombe sur <b>La Mort</b> sans carte Immortalité ! Retour à la case <b>1</b>.`);
+                        updateTokensOnBoard();
+                    }
+                }
+            }
+
+            nextTurn();
+        }
+
+        function applyNegativeBuff(player, special) {
+            if (special.skipTurns) {
+                player.skipTurns = special.skipTurns;
+                addHistoryLog(`${special.icon} <b>${player.name}</b> tombe sur <b>${special.name}</b> et passe ${special.skipTurns} tour(s).`);
+            }
+            updateTokensOnBoard();
+        }
+
+        function nextTurn() {
+            // Check if previous player used 'bloquer' card effect on next player
+            // Move to next player index
+            gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            gameState.diceRolledThisTurn = false;
+
+            // Check if current player was blocked by another player's Bloquer card
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            
+            updateUI();
+        }
+    </script>
+</body>
+</html>
